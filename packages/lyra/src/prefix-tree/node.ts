@@ -1,64 +1,64 @@
-import type { Nullable } from "../types";
+import type { Nullable } from '../types'
 
-type Children = Record<string, TrieNode>;
+type Children = Record<string, TrieNode>
 
-type Docs = Set<string> | string[];
+type Docs = Set<string> | string[]
 
-type NodeContent = [string, Docs];
+type NodeContent = [string, Docs]
 
 export class TrieNode {
-  public key: string;
-  public parent: Nullable<TrieNode> = null;
-  public children: Nullable<Children> = {};
-  public docs: Docs = new Set();
-  public end = false;
+  public key: string
+  public parent: Nullable<TrieNode> = null
+  public children: Nullable<Children> = {}
+  public docs: Docs = []
+  public end = false
 
   constructor(key: string) {
-    this.key = key;
+    this.key = key
   }
 
   setParent(newParent: TrieNode): void {
-    this.parent = newParent;
+    this.parent = newParent
   }
 
   setEnd(val: boolean): void {
-    this.end = val;
+    this.end = val
   }
 
   deleteChildren() {
-    this.children = null;
+    this.children = null
   }
 
   getWord(): NodeContent {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
-    let node: TrieNode = this;
-    let output = "";
+    let node: TrieNode = this
+    let output = ''
 
     while (node !== null) {
-      output = node.key + output;
-      node = node.parent!;
+      output = node.key + output
+      node = node.parent!
     }
 
-    return [output, this.docs];
+    return [output, this.docs]
   }
 
   removeDoc(docID: string): boolean {
     if (this.docs instanceof Set) {
-      return this.docs.delete(docID);
+      return this.docs.delete(docID)
     }
 
     if (this.docs instanceof Array) {
-      const index = this.docs.indexOf(docID);
+      const index = this.docs.indexOf(docID)
 
       if (index === -1) {
-        return false;
+        return false
       }
 
-      this.docs.splice(index, 1);
+      this.docs.splice(index, 1)
 
-      return true;
+      return true
     }
 
-    return false;
+    return false
   }
 }

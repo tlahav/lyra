@@ -15,7 +15,8 @@
   "dependencies": {
     "@nearform/lyra": "workspace:*",
     "cronometro": "^1.1.0",
-    "csv-parse": "^5.1.0"
+    "csv-parse": "^5.1.0",
+    "protobufjs": "^7.0.0"
   },
   "devDependencies": {
     "@types/benchmark": "^2.1.1",

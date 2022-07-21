@@ -1,12 +1,12 @@
 import type { queueAsPromised } from "fastq";
-import { nanoid } from "nanoid";
 import * as fastq from "fastq";
-import { Trie } from "./prefix-tree/trie";
+import { nanoid } from "nanoid";
 import * as ERRORS from "./errors";
-import { tokenize } from "./tokenizer";
-import { formatNanoseconds, getNanosecondsTime } from "./utils";
+import { Trie } from "./prefix-tree/trie";
 import { Language, SUPPORTED_LANGUAGES } from "./stemmer";
+import { tokenize } from "./tokenizer";
 import type { ResolveSchema, SearchProperties } from "./types";
+import { formatNanoseconds, getNanosecondsTime } from "./utils";
 
 export type PropertyType = "string" | "number" | "boolean";
 
@@ -23,7 +23,7 @@ export type LyraProperties<
   edge?: boolean;
 };
 
-export type LyraDocs<TDoc extends PropertiesSchema> = Map<
+export type LyraDocs<TDoc extends PropertiesSchema> = Record<
   string,
   ResolveSchema<TDoc>
 >;
@@ -42,7 +42,7 @@ export type InsertConfig = {
   stemming: boolean;
 };
 
-type LyraIndex = Map<string, Trie>;
+type LyraIndex = Record<string, Trie>;
 
 type QueueDocParams<TTSchema extends PropertiesSchema> = {
   id: string;
@@ -63,8 +63,8 @@ type RetrievedDoc<TDoc extends PropertiesSchema> = ResolveSchema<TDoc> & {
 export class Lyra<TSchema extends PropertiesSchema = PropertiesSchema> {
   private defaultLanguage: Language = "english";
   private schema: TSchema;
-  private docs: LyraDocs<TSchema> = new Map();
-  private index: LyraIndex = new Map();
+  private docs: LyraDocs<TSchema> = {};
+  private index: LyraIndex = {};
   private enableStemming = true;
   private edge = false;
 
@@ -104,7 +104,7 @@ export class Lyra<TSchema extends PropertiesSchema = PropertiesSchema> {
       if (isNested) {
         this.buildIndex(schema[prop] as TSchema, `${propName}.`);
       } else {
-        this.index.set(propName, new Trie());
+        this.index[propName] = new Trie();
       }
     }
   }
@@ -152,7 +152,7 @@ export class Lyra<TSchema extends PropertiesSchema = PropertiesSchema> {
               break;
             }
 
-            const fullDoc = this.docs.get(id)!;
+            const fullDoc = this.docs[id]!;
             results[i] = { id, ...fullDoc };
             i++;
           }
@@ -170,7 +170,7 @@ export class Lyra<TSchema extends PropertiesSchema = PropertiesSchema> {
   }
 
   private getIndices(indices: SearchParams<TSchema>["properties"]): string[] {
-    const knownIndices = [...this.index.keys()];
+    const knownIndices = Object.keys(this.index);
 
     if (!indices) {
       return knownIndices;
@@ -194,14 +194,14 @@ export class Lyra<TSchema extends PropertiesSchema = PropertiesSchema> {
   }
 
   async delete(docID: string): Promise<boolean> {
-    if (!this.docs.has(docID)) {
+    if (!this.docs[docID]) {
       throw ERRORS.DOC_ID_DOES_NOT_EXISTS(docID);
     }
 
-    const document = this.docs.get(docID)!;
+    const document = this.docs[docID]!;
 
     for (const key in document) {
-      const idx = this.index.get(key)!;
+      const idx = this.index[key]!;
       const tokens = tokenize((document as any)[key]);
 
       for (const token of tokens) {
@@ -211,7 +211,7 @@ export class Lyra<TSchema extends PropertiesSchema = PropertiesSchema> {
       }
     }
 
-    this.docs.delete(docID);
+    delete this.docs[docID];
 
     return true;
   }
@@ -219,7 +219,7 @@ export class Lyra<TSchema extends PropertiesSchema = PropertiesSchema> {
   private async getDocumentIDsFromSearch(
     params: SearchParams<TSchema> & { index: string }
   ): Promise<Set<string>> {
-    const idx = this.index.get(params.index);
+    const idx = this.index[params.index];
 
     const searchResult = idx?.find({
       term: params.term,
@@ -269,7 +269,7 @@ export class Lyra<TSchema extends PropertiesSchema = PropertiesSchema> {
     config,
   }: QueueDocParams<TSchema>): Promise<void> {
     const index = this.index;
-    this.docs.set(id, doc);
+    this.docs[id] = doc;
 
     function recursiveTrieInsertion(doc: ResolveSchema<TSchema>, prefix = "") {
       for (const key of Object.keys(doc)) {
@@ -283,7 +283,7 @@ export class Lyra<TSchema extends PropertiesSchema = PropertiesSchema> {
         } else if (typeof doc[key] === "string") {
           // Use propName here because if doc is a nested object
           // We will get the wrong index
-          const requestedTrie = index.get(propName);
+          const requestedTrie = index[propName];
           const tokens = tokenize(
             doc[key] as string,
             config.language,
